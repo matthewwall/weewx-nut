@@ -159,7 +159,7 @@ class NUTDriver(weewx.drivers.AbstractDevice):
             time.sleep(self._poll_interval)
 
 def run_cmd(cmd, path=None, ld_library_path=None):
-    loginf("run command '%s'" % ' '.join(cmd))
+    logdbg("run command '%s'" % ' '.join(cmd))
     env = os.environ.copy()
     if path:
         env['PATH'] = path + ':' + env['PATH']
