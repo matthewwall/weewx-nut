@@ -46,17 +46,6 @@ def loader(config_dict, _):
 def confeditor_loader():
     return NUTConfigurationEditor()
 
-class NUTConfigurationEditor(weewx.drivers.AbstractConfEditor):
-    @property
-    def default_stanza(self):
-        return """
-[NUT]
-    # The driver to use
-    driver = user.nut
-    # The name of the device, defined in the NUT configuration ups.conf
-    device = REPLACE_ME
-"""
-
 # these are fields from NUT that we report during driver initialization
 INFO_FIELDS = [
     'device.model',
@@ -83,7 +72,9 @@ INFO_FIELDS = [
     'ups.realpower.nominal',
 ]
 
-# these are fields that we report in each observation cycle
+# these are fields that we report in each observation cycle.  the names that
+# show up as observations are these fields with the period replaced by an
+# underscore.  the underscore names are what we use as the database fields.
 OBS_FIELDS = [
     'input.voltage',
     'output.voltage',
@@ -92,6 +83,40 @@ OBS_FIELDS = [
     'battery.voltage',
     'ups.load',
 ]
+
+schema = [('dateTime', 'INTEGER NOT NULL UNIQUE PRIMARY KEY'),
+          ('usUnits', 'INTEGER NOT NULL'),
+          ('interval', 'INTEGER NOT NULL'),
+          ('input_voltage', 'REAL'), # volt
+          ('output_voltage', 'REAL'), # volt
+          ('battery_charge', 'REAL'), # percent
+          ('battery_runtime', 'REAL'), # second
+          ('battery_voltage', 'REAL'), # volt
+          ('ups_load', 'REAL'), # percent
+]
+
+weewx.units.obs_group_dict['input_voltage'] = 'group_volt'
+weewx.units.obs_group_dict['output_voltage'] = 'group_volt'
+weewx.units.obs_group_dict['battery_charge'] = 'group_percent'
+weewx.units.obs_group_dict['battery_runtime'] = 'group_elapsed'
+weewx.units.obs_group_dict['battery_voltage'] = 'group_volt'
+weewx.units.obs_group_dict['ups_load'] = 'group_percent'
+
+
+class NUTConfigurationEditor(weewx.drivers.AbstractConfEditor):
+    @property
+    def default_stanza(self):
+        return """
+[NUT]
+    # The driver to use
+    driver = user.nut
+    # The name of the device, defined in the NUT configuration ups.conf
+    device = REPLACE_ME
+"""
+    def prompt_for_settings(self):
+        print("Specify the name of the device as it appears in ups.conf")
+        device = self._prompt('device', 'ups')
+        return {'device', device}
 
 class NUTDriver(weewx.drivers.AbstractDevice):
 
@@ -178,6 +203,8 @@ def main():
                       help='value for LD_LIBRARY_PATH')
     parser.add_option('--device', default='ups',
                       help='device name from ups.conf')
+    parser.add_option('--poll-interval',
+                      help='how often to poll the nut server')
 
     (options, args) = parser.parse_args()
 
@@ -197,6 +224,8 @@ def main():
         config_dict['NUT']['path'] = options.path
     if options.ld_library_path:
         config_dict['NUT']['ld_library_path'] = options.ld_library_path
+    if options.poll_interval:
+        config_dict['NUT']['poll_interval'] = int(options.poll_interval)
 
     driver = loader(config_dict, None)
 
