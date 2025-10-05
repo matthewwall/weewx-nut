@@ -1,0 +1,35 @@
+weewx-nut
+Copyright 2025 Matthew Wall
+Distributed under terms of the GPLv3
+
+This is a driver for weewx that captures data from UPS/PDU devices using the
+NUT client/server software.
+
+
+===============================================================================
+Installation
+
+0) install pre-requisites
+
+  a) install weewx
+      http://weewx.com/docs
+  b) install nut-client and possibly nut-server
+      https://networkupstools.org/
+
+1) install the driver
+
+weectl extension install https://github.com/matthewwall/weewx-nut/archive/master.zip
+
+2) configure the driver
+
+weectl station reconfigure --driver=user.nut --no-prompt
+
+3) run the driver directly to verify functionality
+
+export WEEWX_BINDIR=/usr/share/weewx
+export WEEWX_USRDIR=/etc/weewx/bin/user
+PYTHONPATH=$WEEWX_BINDIR python3 $WEEWX_USRDIR/nut.py
+
+4) start weewx
+
+sudo systemctl start weewx
