@@ -57,6 +57,42 @@ class NUTConfigurationEditor(weewx.drivers.AbstractConfEditor):
     device = REPLACE_ME
 """
 
+# these are fields from NUT that we report during driver initialization
+INFO_FIELDS = [
+    'device.model',
+    'device.serial',
+    'device.type',
+    'device.mfr',
+    'driver.parameter.pollfreq',
+    'driver.parameter.pollinterval',
+    'driver.parameter.port',
+    'driver.parameter.synchronous',
+    'driver.parameter.vendorid',
+    'driver.version',
+    'driver.version.data',
+    'battery.charge.low',
+    'battery.charge.warning',
+    'battery.runtime.low',
+    'battery.type',
+    'input.voltage.nominal',
+    'ups.beeper.status',
+    'ups.delay.shutddown',
+    'ups.delay.start',
+    'ups.vendorid',
+    'ups.productid',
+    'ups.realpower.nominal',
+]
+
+# these are fields that we report in each observation cycle
+OBS_FIELDS = [
+    'input.voltage',
+    'output.voltage',
+    'battery.charge',
+    'battery.runtime',
+    'battery.voltage',
+    'ups.load',
+]
+
 class NUTDriver(weewx.drivers.AbstractDevice):
 
     def __init__(self, **stn_dict):
@@ -72,6 +108,8 @@ class NUTDriver(weewx.drivers.AbstractDevice):
         pairs = run_cmd(self._cmd)
         self._model = pairs.get('device.model', 'NUT')
         loginf('model=%s' % self._model)
+        for label in INFO_FIELDS:
+            loginf('%s=%s' % (label, pairs.get(label)))
 
     def closePort(self):
         pass
@@ -81,9 +119,18 @@ class NUTDriver(weewx.drivers.AbstractDevice):
         return self._model
 
     def genLoopPackets(self):
-        cmd = ['upsc', self._device])
+        cmd = ['upsc', self._device]
         while True:
+            packet = {
+                'dateTime': int(time.time() + 0.5),
+                'usUnits': weewx.US,
+            }
             pairs = run_cmd(cmd)
+            for field in OBS_FIELDS:
+                if field in pairs:
+                    name = field.replace('.', '_')
+                    packet[name] = float(pairs[field])
+            yield packet
             time.sleep(self._poll_interval)
 
 def run_cmd(cmd, path=None, ld_library_path=None):
@@ -103,8 +150,8 @@ def run_cmd(cmd, path=None, ld_library_path=None):
         for line in o.split('\n'):
             parts = line.split(':')
             if len(parts) == 2:
-                name = strip(parts[0])
-                value = strip(parts[1])
+                name = parts[0].strip()
+                value = parts[1].strip()
                 pairs[name] = value
     except (OSError, ValueError) as e:
         raise weewx.WeeWxIOError("failed process '%s': %s" %
@@ -114,29 +161,47 @@ def run_cmd(cmd, path=None, ld_library_path=None):
 
 def main():
     import optparse
+    from weeutil.weeutil import to_sorted_string
 
     usage = """%prog [--debug] [--help] [--version]
         [--path=PATH] [--ld_library_path=LD_LIBRARY_PATH]
     """
 
     parser = optparse.OptionParser(usage=usage)
-    parser.add_option('--version', dest='version', action='store_true',
+    parser.add_option('--version', action='store_true',
                       help='display driver version')
-    parser.add_option('--debug', dest='debug', action='store_true',
+    parser.add_option('--debug', action='store_true',
                       help='display diagnostic information while running')
-    parser.add_option('--path', dest='path',
+    parser.add_option('--path',
                       help='value for PATH')
-    parser.add_option('--ld_library_path', dest='ld_library_path',
+    parser.add_option('--ld_library_path',
                       help='value for LD_LIBRARY_PATH')
+    parser.add_option('--device', default='ups',
+                      help='device name from ups.conf')
 
     (options, args) = parser.parse_args()
 
     if options.version:
         print("nut driver version %s" % DRIVER_VERSION)
-        exit(1)
+        exit(0)
 
     if options.debug:
-        pass # FIXME
+        weewx.debug = 1
+
+    config_dict = {
+        'NUT': {
+            'device': options.device,
+        }
+    }
+    if options.path:
+        config_dict['NUT']['path'] = options.path
+    if options.ld_library_path:
+        config_dict['NUT']['ld_library_path'] = options.ld_library_path
+
+    driver = loader(config_dict, None)
+
+    for pkt in driver.genLoopPackets():
+        print(to_sorted_string(pkt))
 
 
 if __name__ == '__main__':
