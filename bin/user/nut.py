@@ -38,7 +38,7 @@ except ImportError:
         logmsg(syslog.LOG_ERR, msg)
 
 DRIVER_NAME = 'NUT'
-DRIVER_VERSION = '0.1'
+DRIVER_VERSION = '0.2'
 
 def loader(config_dict, _):
     return NUTDriver(**config_dict[DRIVER_NAME])
@@ -171,7 +171,7 @@ def run_cmd(cmd, path=None, ld_library_path=None):
                              env=env,
                              stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE)
-        o = p.communicate()[0]
+        o = p.communicate()[0].decode('utf-8')
         for line in o.split('\n'):
             parts = line.split(':')
             if len(parts) == 2:

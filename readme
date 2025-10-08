@@ -15,20 +15,23 @@ Installation
       http://weewx.com/docs
   b) install nut-client and possibly nut-server
       https://networkupstools.org/
+  c) for local monitoring configure at least one device in nut
+      sudo vi /etc/nut/ups.conf
+      sudo systemctl restart nut-server
 
 1) install the driver
 
 weectl extension install https://github.com/matthewwall/weewx-nut/archive/master.zip
 
-2) configure the driver
-
-weectl station reconfigure --driver=user.nut --no-prompt
-
-3) run the driver directly to verify functionality
+2) run the driver directly to verify functionality
 
 export WEEWX_BINDIR=/usr/share/weewx
 export WEEWX_USRDIR=/etc/weewx/bin/user
 PYTHONPATH=$WEEWX_BINDIR python3 $WEEWX_USRDIR/nut.py
+
+3) configure the driver
+
+weectl station reconfigure --driver=user.nut
 
 4) start weewx
 

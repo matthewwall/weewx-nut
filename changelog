@@ -1,2 +1,5 @@
 0.1 05oct2025
 * initial release
+
+0.2 08oct2025
+* fix decoding to work with python3

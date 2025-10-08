@@ -10,7 +10,7 @@ def loader():
 class NUTInstaller(ExtensionInstaller):
     def __init__(self):
         super(NUTInstaller, self).__init__(
-            version="0.1",
+            version="0.2",
             name='nut',
             description='Capture data from UPS/PDU using NUT',
             author="Matthew Wall",
